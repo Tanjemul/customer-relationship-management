@@ -35,7 +35,7 @@ Update application.yaml with your database credentials.
 
 ## API Documentation
 
-The complete API documentation is available [here](https://).
+The complete API documentation is available [here](https://documenter.getpostman.com/view/25076611/2sAYQWHsKd).
 
 You can explore all endpoints, parameters, and responses interactively.
 
