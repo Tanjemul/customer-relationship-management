@@ -74,7 +74,7 @@ This project adheres to the [Contributor Covenant Code of Conduct](https://www.c
 If you have any questions or need further clarification, feel free to reach out:
 
 - **Project Owner:** [Tanjemul](https://github.com/Tanjemul)
-- **Email:** mdtanjemul.i@gmail.com
+- **Email:** [My email](mailto:tanjemul11@gmail.com)
 
 ---
 
