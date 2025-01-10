@@ -1,5 +1,5 @@
 
-# Ccustomer Relationship Management Backend Solution
+# Customer Relationship Management Backend Solution
 This project is a Spring Boot-based backend application designed to handle basic functionalities for a customer relationship management solution. It includes customer account management, multiple address management and chatbot backend support.
 This project is not a comprehensive solution for customer relationship management solution. Rather it provides the basic skeleton, which could serve as a template for further development. 
 ### Features
