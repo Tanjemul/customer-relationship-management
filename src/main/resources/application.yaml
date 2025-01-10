@@ -1,0 +1,30 @@
+server:
+  port: 20099
+
+logging:
+  level:
+    root: INFO
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.jdbc: DEBUG
+    org.springframework.orm.jpa: DEBUG
+    org.hibernate.engine.jdbc.spi.SqlExceptionHelper: WARN
+
+Spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/crmdb
+
+    username: postgres
+    password: Tan@01744
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        types.print.banner: false
+        format_sql: true
+    defer-datasource-initialization: true

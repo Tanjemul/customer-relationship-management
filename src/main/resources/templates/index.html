@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs/lib/stomp.min.js"></script>
+    <style>
+        /* Chatbox container styling */
+        #chatbox {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 300px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            background: white;
+            font-family: Arial, sans-serif;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            transition: height 0.3s ease;
+            overflow: hidden;
+        }
+
+        /* Chatbox header styling */
+        #chatbox-header {
+            background: #007bff;
+            color: white;
+            padding: 10px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        #chatbox-header span {
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        /* Input form styling */
+        #name-input-section {
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            border-bottom: 1px solid #ccc;
+        }
+
+        #name-input-section input {
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        #name-input-section button {
+            padding: 5px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        /* Chat messages styling */
+        #messages {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        #messages p {
+            margin: 5px 0;
+        }
+
+        /* Chat input styling */
+        #chatbox-input {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid #ccc;
+            background: #f9f9f9;
+            display: none;
+        }
+
+        #chatbox-input input {
+            flex: 1;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-right: 5px;
+        }
+
+        #chatbox-input button {
+            padding: 5px 10px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        /* Collapsed state */
+        #chatbox.minimized {
+            height: 50px;
+        }
+
+        /* Expanded state */
+        #chatbox.expanded {
+            height: 500px;
+        }
+    </style>
+</head>
+<body>
+<div id="chatbox" class="minimized">
+    <div id="chatbox-header" onclick="toggleChatbox()">
+        Chat <span id="chatbox-toggle-text">+</span>
+        <button id="endChatButton" onclick="endChat(event)" style="margin-left: auto; background: #ff4d4d; color: white; border: none; border-radius: 5px; padding: 5px 10px; cursor: pointer; display: none;">End Chat</button>
+    </div>
+
+    <!-- Name and email input -->
+    <div id="name-input-section">
+        <input id="sender" type="text" placeholder="Enter your name" />
+        <input id="email" type="email" placeholder="Enter your email" />
+        <button onclick="setNameAndEmail()">Start Chat</button>
+    </div>
+
+
+    <!-- Chat messages -->
+    <div id="messages">
+        <!-- Messages will appear here -->
+    </div>
+
+    <!-- Chat input -->
+    <div id="chatbox-input">
+        <input id="message" type="text" placeholder="Type your message" onkeypress="handleKeyPress(event)" />
+        <button id="sendButton" onclick="sendMessage()" disabled>Send</button>
+    </div>
+</div>
+
+<script>
+    let stompClient = null;
+    let senderName = "";
+    let senderEmail = "";
+    let connected = false;
+
+    // Toggle chatbox state (expand/collapse)
+    function toggleChatbox() {
+        const chatbox = document.getElementById('chatbox');
+        const toggleText = document.getElementById('chatbox-toggle-text');
+
+        if (chatbox.classList.contains('minimized')) {
+            chatbox.classList.remove('minimized');
+            chatbox.classList.add('expanded');
+            toggleText.textContent = "-";
+        } else {
+            chatbox.classList.remove('expanded');
+            chatbox.classList.add('minimized');
+            toggleText.textContent = "+";
+        }
+    }
+    //Enter key to send message
+    function handleKeyPress(event) {
+    if (event.key === "Enter") {
+        sendMessage(); // Call sendMessage when Enter is pressed
+        }
+    }
+
+    // Modify setNameAndEmail to show the End Chat button when chat starts
+    function setNameAndEmail() {
+        const name = document.getElementById('sender').value.trim();
+        const email = document.getElementById('email').value.trim();
+
+        if (!name || !email || !validateEmail(email)) {
+            alert("Please enter a valid name and email address.");
+            return;
+        }
+
+        senderName = name;
+        senderEmail = email;
+        alert(`Welcome, ${senderName}! You can now start chatting.`);
+
+        // Hide name input and show chat sections
+        document.getElementById('name-input-section').style.display = 'none';
+        document.getElementById('messages').style.display = 'block';
+        document.getElementById('chatbox-input').style.display = 'flex';
+
+        // Show the End Chat button
+        document.getElementById('endChatButton').style.display = 'block';
+
+        connect(); // Establish WebSocket connection
+    }
+
+    // Validate email
+    function validateEmail(email) {
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return re.test(email);
+    }
+
+    // Connect to WebSocket
+    function connect() {
+        const socket = new SockJS('/ws-chat');
+        stompClient = Stomp.over(socket);
+
+        stompClient.connect({}, function (frame) {
+            console.log('Connected: ' + frame);
+            connected = true;
+            document.getElementById("sendButton").disabled = false;
+
+            stompClient.subscribe('/topic/messages', function (message) {
+                const chatMessage = JSON.parse(message.body);
+                const messagesDiv = document.getElementById('messages');
+                messagesDiv.innerHTML += `<p><strong>${chatMessage.sender}:</strong> ${chatMessage.content}</p>`;
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            });
+        }, function (error) {
+            console.error('WebSocket error:', error);
+        });
+    }
+
+    // Send chat message
+    function sendMessage() {
+        if (connected) {
+            const messageContent = document.getElementById('message').value.trim();
+            if (messageContent) {
+                const chatMessage = {
+                    sender: senderName,
+                    content: messageContent
+                };
+                stompClient.send("/app/send", {}, JSON.stringify(chatMessage));
+                document.getElementById('message').value = '';
+            }
+        } else {
+            alert("You are not connected yet!");
+        }
+    }
+
+
+    // End the chat and reset the chatbox
+    function endChat(event) {
+        event.stopPropagation(); // Prevent triggering the expand/collapse toggle
+
+        // Disconnect WebSocket if connected
+        if (stompClient && connected) {
+            stompClient.disconnect(() => console.log("Disconnected from WebSocket"));
+            connected = false;
+        }
+
+        // Reset chatbox UI
+        senderName = "";
+        senderEmail = "";
+        document.getElementById("sender").value = "";
+        document.getElementById("email").value = "";
+        document.getElementById("message").value = "";
+        document.getElementById("messages").innerHTML = "";
+        document.getElementById("sendButton").disabled = true;
+
+        // Show the name and email input section
+        document.getElementById('name-input-section').style.display = 'block';
+
+        // Hide the chat input and messages section
+        document.getElementById('messages').style.display = 'none';
+        document.getElementById('chatbox-input').style.display = 'none';
+
+        // Hide the End Chat button
+        document.getElementById('endChatButton').style.display = 'none';
+
+        alert("Chat ended. You can start a new chat.");
+    }
+
+</script>
+</body>
+</html>
